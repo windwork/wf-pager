@@ -94,6 +94,18 @@ class Pager {
 	 * @var string = 'rows
 	 */
 	public $rowsVar = 'rows';
+
+	/**
+	 * 变量分隔符
+	 * @var string
+	 */
+	protected $argSeparator = '/';
+	
+	/**
+	 * 变量和值的分隔符
+	 * @var string
+	 */
+	protected $valSeparator = ':';
 	
 	/**
 	 * 是否允许通过URL设置每页记录数
@@ -115,13 +127,19 @@ class Pager {
 	 * @param bool $rowsAllowCustom = false 是否允许在URL中设置每页显示记录数
 	 * @param string $pageVar = 'page' URL中页码的变量
 	 * @param string $rowsVar = 'rows' URL中每页行数的变量
+	 * @param string $argSeparator = '/'  变量分隔符
+	 * @param string $valSeparator = ':'  变量和值的分隔符
 	 */
-	public function __construct($totals, $rows = 10, $tpl = 'default', $uri= '', $rowsAllowCustom = true, $pageVar = 'page', $rowsVar = 'rows') {
+	public function __construct($totals, $rows = 10, $tpl = 'default', $uri= '', 
+			$rowsAllowCustom = true, $pageVar = 'page', $rowsVar = 'rows', 
+			$argSeparator = '/', $valSeparator = ':') {
 		$this->totals  = $totals;
 		$this->pageVar = $pageVar;
 		$this->rowsVar = $rowsVar;
 		$this->rowsAllowCustom = $rowsAllowCustom;
 		$this->rowsVar = $rowsVar;
+		$this->argSeparator = $argSeparator;
+		$this->valSeparator = $valSeparator;
 		
 		if (!in_array($tpl, ['mobile', 'simple', 'complex'])) {
 			$tpl = 'simple';
@@ -139,7 +157,7 @@ class Pager {
 		// 提取当前页码
 		if(!empty($postArgs[$pageVar])) {
 			$this->page = $postArgs[$pageVar];
-		} elseif(preg_match("/[\\/\\?&]{$pageVar}[:=](\\d+)/i", $uri, $pageMatch)) {
+		} elseif(preg_match("/[\\?\\{$this->argSeparator}]{$pageVar}\\{$this->valSeparator}(\\d+)/i", $uri, $pageMatch)) {
 		    $this->page = $pageMatch[1];
 		}
 		$this->page <= 0 && $this->page = 1;
@@ -149,7 +167,7 @@ class Pager {
 			// 允许地址栏传入每页记录数参数
 			if(!empty($postArgs[$rowsVar])) {
 				$this->rows = $postArgs[$rowsVar];
-			} elseif(preg_match("/[\\/\\?&]{$rowsVar}[:=](\\d+)/i", $uri, $rowsMatch)) {
+			} elseif(preg_match("/[\\{$this->argSeparator}\\?]{$rowsVar}\\{$this->valSeparator}(\\d+)/i", $uri, $rowsMatch)) {
 				$this->rows = $rowsMatch[1];
 			} else {
 				$this->rows = $rows;
@@ -162,19 +180,18 @@ class Pager {
 		
 		// 请求变量合并入URL
 		if ($postArgs) {
-			if (false === strpos($uri, '?')) {
-				$uri = rtrim($uri, '/') . '/';
-				// 构造URL参数  /$key:$val
-				$argStr = str_replace('=', ':', http_build_query($postArgs, '', '/'));
-				$uri .= $argStr;
-			} else {
-				$uri = $uri . '&' . http_build_query($postArgs, 'arg_');
+			$uri = rtrim($uri, '/') . '/';
+			$argStr = http_build_query($postArgs, 'arg_', $this->argSeparator);
+			if ($this->valSeparator != '=') {
+				$argStr = str_replace('=', $this->valSeparator, $argStr);
 			}
+			
+			$uri .= $this->argSeparator . $argStr;
 		}
 		
 		// 去掉分页、每页行数参数
-	    $uri = preg_replace("/([\\/&]({$pageVar}|{$rowsVar})[:=]\\d+)/", '', $uri);
-	    $uri = preg_replace("/([\\?]({$pageVar}|{$rowsVar})[:=]\\d+)/", '?', $uri);
+	    $uri = preg_replace("/(\\{$this->argSeparator}({$pageVar}|{$rowsVar})\\{$this->valSeparator}\\d+)/", '', $uri);
+	    $uri = preg_replace("/([\\?]({$pageVar}|{$rowsVar}){$this->valSeparator}\\d+)/", '?', $uri);
 	    $uri = str_replace("?&", '?', $uri);
 	    
 	    $this->uri = $uri;
@@ -208,11 +225,11 @@ class Pager {
 		$url = $this->uri;
 		
 	    if ($rows && $this->rowsAllowCustom) {
-	    	$url .= false === strpos($url, '?') ? "/{$this->rowsVar}:{$rows}" : "&{$this->rowsVar}={$rows}";
+	    	$url .= "{$this->argSeparator}{$this->rowsVar}{$this->valSeparator}{$rows}";
 	    }
 		
 		if ($page > 1) {
-	    	$url .= false === strpos($url, '?') ? "/{$this->pageVar}:{$page}" : "&{$this->pageVar}={$page}";
+	    	$url .= "{$this->argSeparator}{$this->pageVar}{$this->valSeparator}{$page}";
 		}
 		
 		return $url;
