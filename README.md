@@ -55,18 +55,25 @@ $pager = new \wf\pager\Pager($total, 10, $tpl);
 ```
 
 ## 分页样式案例
-### simple
-```
-
 
 ```
 
-### mobile
-```
+<style>
+.pagination { margin: 20px auto; padding: 0; height: 36px; font-size: 14px; }
+.pagination li { display: inline; }
+.pagination li a { display: inline; float: left; line-height: 36px; margin-left: -1px; padding: 0 12px; border: 1px solid #e0e0e0; position: relative; text-decoration: none; }
+.pagination li a:hover { background: #f8f8f8; }
+.pagination li.current a {background: #f8f8f8;}
+.pagination li a span { color:#2a6496; }
+.pagination li.current a span {color: #000; font-weight: bold; }
+.pagination li.paging-select { line-height: 36px; float: right; color:#999; }
+.pagination li.paging-select span { font-size: 12px; }
+.pagination li.paging-select select { border: 1px solid #e0e0e0; height: 28px; padding: 0 3px; }
+
+.pagination.mobile { font-size: 0; text-align: center; }
+.pagination.mobile li { display: inline-block; }
+.pagination.mobile li a span { font-size: 14px; }
+</style>
 
 ```
 
-### complex
-```
-
-```
