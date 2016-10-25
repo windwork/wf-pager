@@ -3,7 +3,6 @@ windwork 分页组件
 
 原理，通过设置总记录数和每页显示记录数，计算出分页导航参数并可生成分页导航html。
 
-
 ## 使用案例
 ```
 
@@ -44,7 +43,7 @@ $pager = new \wf\pager\Pager($total, 12, $tpl);
 
 ```
 // 控制器中
-$pager = new \wf\pager\Pager($total, 10, $tpl);
+$pager = new \wf\pager\Pager($total, 10);
 
 // PC版视图中使用默认分页导航条
 <div>{$pager->getHtml()}</div>
@@ -77,3 +76,37 @@ $pager = new \wf\pager\Pager($total, 10, $tpl);
 
 ```
 
+## 高级功能
+### 1、自定义分页参数
+可配置参数：
+```
+$args = [
+	'arg_separator'   => '&',  // 参数分隔符号
+	'val_separator'   => '=',  // 参数变量名和值的分隔符
+	'page_var'        => 'page', // 分页页码的url请求变量名
+	'rows_var'        => 'rows', // 每页行数的url请求变量名
+    'rows_max'        => 100,  // 每页允许最多记录数
+];
+```
+
+```
+$pager = new Pager(200, 10);
+$pager->uri = 'http://localhost/demo/xx';
+
+// 得到默认格式的分页链接
+// http://localhost/demo/xx?rows=10&page=2
+$url = $pager->getPageUrl(2); 
+
+// 通过设置参数获得自定义的分页变量分隔符
+$args = [
+	'arg_separator'   => '/',  // 参数分隔符号
+	'val_separator'   => ':', // 变量和值的分隔符
+];
+$pager = new Pager(200, 10, '', $args);
+$pager->uri = 'http://localhost/demo/xx';
+
+// 得到个性化格式的分页链接： 
+// http://localhost/demo/xx/rows:10/page:2
+$url = $pager->getPageUrl(2); 
+
+```

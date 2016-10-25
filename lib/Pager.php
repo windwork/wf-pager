@@ -120,7 +120,7 @@ class Pager {
 	/**
 	 * 分页设置
 	 * 
-	 * 当页面URL中存在 ? 时，分页链接附加上的页码、页记录数、POST请求变量使用 &$k=$v风格，否则使用 /$k:$v 风格
+	 * 当页面URL中存在 ? 时，分页参数总是使用标准模式，即?k1=v1&k2=v2模式，否则按设置的参数格式获取到url
 	 *
 	 * @param int $totals 总记录数
 	 * @param int $rows = 10 每页显示记录数
@@ -128,11 +128,11 @@ class Pager {
 	 * @param array $args = [] 设置属性，可设置部分属性
 	 * <pre>
 	 * [
-	 *     'arg_separator' => '&', // 参数分隔符号
-	 *     'val_separator' => '=', // 变量和值的分隔符
+	 *     'arg_separator' => '&',    // 参数分隔符号
+	 *     'val_separator' => '=',    // 参数变量名和值的分隔符
 	 *     'page_var'      => 'page', // 分页页码的url请求变量名
-	 *     'rows_var'      => 'rows', // 每页行数的url请求变量
-	 *     'rows_max'      => 100,  // 每页允许最多记录数
+	 *     'rows_var'      => 'rows', // 每页行数的url请求变量名
+	 *     'rows_max'      => 100,    // 每页允许最多记录数
 	 * ]
 	 * </pre>
 	 */
