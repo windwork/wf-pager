@@ -21,7 +21,7 @@ namespace wf\pager;
  */
 class Pager {
 	/**
-	 * 当前页数
+	 * 当前页码，从1开始，大于最大页数被强制转换成最大页码
 	 * 
 	 * @var int = 1
 	 */
@@ -83,7 +83,7 @@ class Pager {
 	public $rowsMax = 100;
 
 	/**
-	 * 查询的起始项
+	 * 查询的起始项，从0开始，提供数据库查询时确定查询开始记录下标
 	 *
 	 * @var int
 	 */
@@ -99,22 +99,24 @@ class Pager {
 	 * 变量分隔符
 	 * @var string
 	 */
-	protected $argSeparator = '/';
+	public $argSeparator = '/';
 	
 	/**
 	 * 变量和值的分隔符
 	 * @var string
 	 */
-	protected $valSeparator = ':';
+	public $valSeparator = ':';
 	
 	/**
 	 * 是否允许通过URL设置每页记录数
 	 * @var bool
 	 */
-	protected $rowsAllowCustom = false;
+	public $allowCustomRows = true;
 	
-	protected $tpl = '';
-
+	public $tpl;
+	
+	private $isParsed = false;
+	
 	/**
 	 * 分页设置
 	 * 
@@ -123,79 +125,98 @@ class Pager {
 	 * @param int $totals 总记录数
 	 * @param int $rows = 10 每页显示记录数
 	 * @param string $tpl = '' 导航模板，mobile）手机分页, simple）简单分页, complex）复杂分页
-	 * @param string $uri = '' URL中除了分页变量和每页行数变量以外的部分
-	 * @param bool $rowsAllowCustom = false 是否允许在URL中设置每页显示记录数
-	 * @param string $pageVar = 'page' URL中页码的变量
-	 * @param string $rowsVar = 'rows' URL中每页行数的变量
-	 * @param string $argSeparator = '/'  变量分隔符
-	 * @param string $valSeparator = ':'  变量和值的分隔符
+	 * @param array $args = [] 设置属性，可设置部分属性
+	 * <pre>
+	 * [
+	 *     'arg_separator' => '&', // 参数分隔符号
+	 *     'val_separator' => '=', // 变量和值的分隔符
+	 *     'page_var'      => 'page', // 分页页码的url请求变量名
+	 *     'rows_var'      => 'rows', // 每页行数的url请求变量
+	 *     'rows_max'      => 100,  // 每页允许最多记录数
+	 * ]
+	 * </pre>
 	 */
-	public function __construct($totals, $rows = 10, $tpl = 'default', $uri= '', 
-			$rowsAllowCustom = true, $pageVar = 'page', $rowsVar = 'rows', 
-			$argSeparator = '/', $valSeparator = ':') {
-		$this->totals  = $totals;
-		$this->pageVar = $pageVar;
-		$this->rowsVar = $rowsVar;
-		$this->rowsAllowCustom = $rowsAllowCustom;
-		$this->rowsVar = $rowsVar;
-		$this->argSeparator = $argSeparator;
-		$this->valSeparator = $valSeparator;
+	public function __construct($totals, $rows = 10, $tpl = '', array $args = []) {
+		$this->totals = $totals;
+		$this->rows = $rows;
 		
-		if (!in_array($tpl, ['mobile', 'simple', 'complex'])) {
-			$tpl = 'simple';
-		}
-		$this->tpl = $tpl;
+		$tpl && $this->tpl = $tpl;
 				
-		// uri预处理
-		if(!$uri) {
-			$uri = $_SERVER['REQUEST_URI'];
+		// 默认URI
+		$this->uri = $_SERVER['REQUEST_URI'];
+		
+		// args参数赋值给public属性
+		if ($args) {
+			foreach ($args as $key => $val) {
+				// 下划线下标换成驼峰风格
+				$attrName = preg_replace_callback('/_([a-z]{1})/i',function($matches){
+					return strtoupper($matches[1]);
+				}, $key);
+				if (!in_array($attrName, ['argSeparator', 'valSeparator', 'pageVar', 'rowsVar', 'rowsMax'])) {
+					continue;
+				}
+				$this->$attrName = $val;
+			}
+		}
+	}
+	
+	/**
+	 * 提取参数
+	 */
+	private function parseArgs() {
+		// 如果url中有?则使用常规分页参数
+		if (false !== stripos($this->uri, '?')) {
+			$this->argSeparator = '&';
+			$this->valSeparator = '=';
 		}
 
-		// 请求参数
-		$postArgs = $_POST;
+		$pregArgSeparator = $this->argSeparator == '&' ? '' : preg_quote($this->argSeparator, '/');
+		$pregValSeparator = $this->valSeparator == '=' ? '' : preg_quote($this->valSeparator, '/');
 		
-		// 提取当前页码
-		if(!empty($postArgs[$pageVar])) {
-			$this->page = $postArgs[$pageVar];
-		} elseif(preg_match("/[\\?\\{$this->argSeparator}]{$pageVar}\\{$this->valSeparator}(\\d+)/i", $uri, $pageMatch)) {
-		    $this->page = $pageMatch[1];
-		}
-		$this->page <= 0 && $this->page = 1;
-		
-		// 提取每页行数
-		if ($rowsAllowCustom) {
-			// 允许地址栏传入每页记录数参数
-			if(!empty($postArgs[$rowsVar])) {
-				$this->rows = $postArgs[$rowsVar];
-			} elseif(preg_match("/[\\{$this->argSeparator}\\?]{$rowsVar}\\{$this->valSeparator}(\\d+)/i", $uri, $rowsMatch)) {
-				$this->rows = $rowsMatch[1];
-			} else {
-				$this->rows = $rows;
+		if ($this->argSeparator == '&' && $this->valSeparator == '=') {
+			// 常规链接应该有参数前应该有 ?
+			$this->uri = str_replace('&amp;', '&', $this->uri);
+			if (false === stripos($this->uri, '?')) {
+				$this->uri .= '?';
 			}
-			// 最多记录数限制
-			$this->rows > $this->rowsMax && $this->rows = $this->rowsMax;
-		} else {
-			$this->rows = $rows;
 		}
+		$this->uri = rtrim($this->uri, $this->argSeparator);
 		
-		// 请求变量合并入URL
-		if ($postArgs) {
-			$uri = rtrim($uri, '/') . '/';
-			$argStr = http_build_query($postArgs, 'arg_', $this->argSeparator);
+		// POST请求参数合并入URL
+		if ($_POST) {
+			$argStr = http_build_query($_POST, '__', $this->argSeparator);
+			
+			// 键值分隔符号不是=
 			if ($this->valSeparator != '=') {
 				$argStr = str_replace('=', $this->valSeparator, $argStr);
 			}
 			
-			$uri .= $this->argSeparator . $argStr;
+			$this->uri .= $this->argSeparator . $argStr;
 		}
 		
-		// 去掉分页、每页行数参数
-	    $uri = preg_replace("/(\\{$this->argSeparator}({$pageVar}|{$rowsVar})\\{$this->valSeparator}\\d+)/", '', $uri);
-	    $uri = preg_replace("/([\\?]({$pageVar}|{$rowsVar}){$this->valSeparator}\\d+)/", '?', $uri);
-	    $uri = str_replace("?&", '?', $uri);
-	    
-	    $this->uri = $uri;
+		// 从请求参数中提取当前页码
+		if(preg_match_all("/[\\?&{$pregArgSeparator}]{$this->pageVar}[={$pregValSeparator}](\\d+)/i", $this->uri, $pageMatch)) {
+			// 匹配?page=N、&page=N、{$this->argSeparator}page{$this->valSeparator}=N
+		    $this->page = end($pageMatch[1]);
+		}
+		$this->page <= 0 && $this->page = 1;
 		
+		// 允许地址栏传入每页记录数参数，则从请求参数中提取每页行数
+		if ($this->allowCustomRows) {
+			if(preg_match_all("/[\\?&{$pregArgSeparator}]{$this->rowsVar}[={$pregValSeparator}](\\d+)/i", $this->uri, $rowsMatch)) {
+				// 匹配?page=N、&page=N、{$this->argSeparator}page{$this->valSeparator}=N
+				$this->rows = end($rowsMatch[1]);
+			}
+			
+			// 最多记录数限制
+			$this->rows > $this->rowsMax && $this->rows = $this->rowsMax;
+		}
+		
+		// 去掉URI中的分页、每页行数参数
+	    $this->uri = preg_replace("/([&{$pregArgSeparator}]({$this->pageVar}|{$this->rowsVar})[={$pregValSeparator}]\\d+)/", '', $this->uri);
+	    $this->uri = preg_replace("/(\\?({$this->pageVar}|{$this->rowsVar})[={$pregValSeparator}]\\d+)/", '?', $this->uri); // 页码、页记录数变量连在?之后，即?page=xx或?page:xxx
+	    	    	
+	    
 		/* 页码计算 */
 		
 		// 最后页，也是总页数
@@ -211,7 +232,9 @@ class Pager {
 		$this->nextPage = min($this->lastPage, $this->page + 1);
 		
 		// 起始记录，当前页在数据库查询符合结果中的起始记录
-		$this->offset = max(($this->page - 1) * $this->rows, 0);
+		$this->offset = max(($this->page - 1) * $this->rows, 0);	
+		
+		$this->isParsed = true;
 	}
 	
 	/**
@@ -221,16 +244,22 @@ class Pager {
 	 * @return string
 	 */
 	public function getPageUrl($page, $rows = null) {
+		if (!$this->isParsed) {
+			$this->parseArgs();
+		}
+		
 		$rows || $rows = $this->rows;
 		$url = $this->uri;
 		
-	    if ($rows && $this->rowsAllowCustom) {
+	    if ($this->allowCustomRows) {
 	    	$url .= "{$this->argSeparator}{$this->rowsVar}{$this->valSeparator}{$rows}";
 	    }
 		
 		if ($page > 1) {
 	    	$url .= "{$this->argSeparator}{$this->pageVar}{$this->valSeparator}{$page}";
 		}
+		
+		$url = str_replace("?&", '?', $url);
 		
 		return $url;
 	}
@@ -248,6 +277,10 @@ class Pager {
 	 * @return object
 	 */
 	public function getObj4Json() {
+		if (!$this->isParsed) {
+			$this->parseArgs();
+		}
+		
 		$r = array(
 		    'totals' => $this->totals,
 	        'pages'  => $this->lastPage,
@@ -264,10 +297,15 @@ class Pager {
 	 * @param string $tpl = '' 选择使用导航条模板
 	 */
 	public function getHtml($tpl = '') {
+		if (!$this->isParsed) {
+			$this->parseArgs();
+		}
+		
 		$tpl = $tpl ? $tpl : $this->tpl;
-		$view = __DIR__ . "/view/{$tpl}.php";
+		$viewFile = __DIR__ . "/view/{$tpl}.php";
+		
 		ob_start();
-		include $view;
+		include $viewFile;
 		return ob_get_clean();
 	}
 }
