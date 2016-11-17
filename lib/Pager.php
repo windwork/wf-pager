@@ -12,6 +12,7 @@ namespace wf\pager;
 
 /**
  * 分页类
+ * 
  * 通过传入总记录数、每页显示记录数来生成分页导航
  * 
  * @package     wf.pager
@@ -30,9 +31,9 @@ class Pager {
 	/**
 	 * 总记录数
 	 *
-	 * @var int = 100
+	 * @var int = 0
 	 */
-	public $totals = 100;
+	public $totals = 0;
 	
 	/**
 	 * 每页显示记录数
@@ -113,8 +114,18 @@ class Pager {
 	 */
 	public $allowCustomRows = true;
 	
+	/**
+	 * 分页导航条显示模板id，
+	 * 
+	 * mobile）手机分页, simple）简单分页, complex）复杂分页
+	 * @var string
+	 */
 	public $tpl;
 	
+	/**
+	 * 是否已经计算出分页参数
+	 * @var bool
+	 */
 	private $isParsed = false;
 	
 	/**
@@ -149,12 +160,14 @@ class Pager {
 		if ($args) {
 			foreach ($args as $key => $val) {
 				// 下划线下标换成驼峰风格
-				$attrName = preg_replace_callback('/_([a-z]{1})/i',function($matches){
+				$attrName = preg_replace_callback('/_([a-z]{1})/i', function($matches){
 					return strtoupper($matches[1]);
 				}, $key);
+				
 				if (!in_array($attrName, ['argSeparator', 'valSeparator', 'pageVar', 'rowsVar', 'rowsMax'])) {
 					continue;
 				}
+				
 				$this->$attrName = $val;
 			}
 		}
