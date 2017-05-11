@@ -3,7 +3,7 @@
   "description" : "windwork pager components,Windwork 分页组件",
   "type": "library",
   "keywords": ["pager","paging","pagination"],
-  "version" : "0.2.2",
+  "version" : "0.3.0",
   "require" : {
     "php" : ">=5.5.0"
   },

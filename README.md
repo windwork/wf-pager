@@ -1,20 +1,22 @@
 windwork 分页组件
 ===================
 
-通过设置总记录数和每页显示记录数，计算出分页导航参数并可生成分页导航html。提供3种不同的分页显示模板。
+通过设置总记录数和每页显示记录数，计算出分页导航参数并可生成分页导航html。
+我们提供了3种不同的分页显示模板，如果不能满足你的需要，可自己编写分页模板。
 
 ## 使用案例
 ```
 
-// $userObj = new \module\user\model\UserModel();
+// $userObj = new \app\user\model\UserModel();
 // $total = $userObj->find()->count(); // 总用户数
 
 $total = 125; // 总共记录数
 $rows  = 20; // 每页显示记录数
 $pager = new \wf\pager\Pager($total, 12);
+// 在Windwork控制器中使用 $pager = pager($total, $rows);
 
 // 让sql知道从第几行获取数据，获取多少行
-// $userObj->find()->all($pager->offset, $pager->rows);
+// $userObj->find()->fetchAll($pager->offset, $pager->rows);
 
 // 显示分页导航条
 echo $pager->getHtml();
@@ -28,12 +30,13 @@ echo $pager->getHtml();
 - complex 复杂导航，一般用在管理后台
 
 
-### 方式1、在控制器中指定模板风格
+### 方式1、在构造函数中指定模板风格
 ```
 // 导航选择使用模板
 $tpl = 'simple'; // simple|mobile|complex
 
-$pager = new \wf\pager\Pager($total, 12, $tpl);
+$pager = new \wf\pager\Pager($total, 12, '', ['tpl' => $tpl]);
+$pager->getHtml()
 
 ```
 
@@ -46,7 +49,7 @@ $pager = new \wf\pager\Pager($total, 12, $tpl);
 $pager = new \wf\pager\Pager($total, 10);
 
 // PC版视图中使用默认分页导航条
-<div>{$pager->getHtml()}</div>
+<div>{$pager->getHtml('complex')}</div>
 
 // 手机版视图中使用手机分页导航条
 <div>{$pager->getHtml('mobile')}</div>
@@ -81,11 +84,12 @@ $pager = new \wf\pager\Pager($total, 10);
 可配置参数：
 ```
 $args = [
-	'arg_separator'   => '&',  // 参数分隔符号
-	'val_separator'   => '=',  // 参数变量名和值的分隔符
-	'page_var'        => 'page', // 分页页码的url请求变量名
-	'rows_var'        => 'rows', // 每页行数的url请求变量名
-    'rows_max'        => 100,  // 每页允许最多记录数
+    'argSeparator'   => '&',      // 参数分隔符号
+    'valSeparator'   => '=',      // 参数变量名和值的分隔符
+    'pageVar'        => 'page',   // 分页页码的url请求变量名
+    'rowsVar'        => 'rows',   // 每页行数的url请求变量名
+    'rows_max'       => 100,      // 每页允许最多记录数
+    'tpl'            => 'simple', // 默认分页样式，mobile）手机分页, simple）简单分页, complex）复杂分页
 ];
 ```
 
@@ -99,8 +103,8 @@ $url = $pager->getPageUrl(2);
 
 // 通过设置参数获得自定义的分页变量分隔符
 $args = [
-	'arg_separator'   => '/',  // 参数分隔符号
-	'val_separator'   => ':', // 变量和值的分隔符
+    'argSeparator'   => '/',  // 参数分隔符号
+    'valSeparator'   => ':', // 变量和值的分隔符
 ];
 $pager = new Pager(200, 10, '', $args);
 $pager->uri = 'http://localhost/demo/xx';
