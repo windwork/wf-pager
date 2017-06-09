@@ -94,7 +94,7 @@ class Pager
      * 变量分隔符
      * @var string
      */
-    public $argSeparator = '?';
+    public $argSeparator = '&';
     
     /**
      * 变量和值的分隔符
