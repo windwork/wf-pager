@@ -170,6 +170,15 @@ class Pager
             }
         }
         
+        // 参数分隔符限制
+        $forbidChar = ['?', '#', '.', '%'];
+        if (in_array($this->argSeparator, $forbidChar)) {
+            throw new Exception(get_class($this) . '::argSeparator 属性不能是' . implode(',', $forbidChar));
+        }
+        if (in_array($this->valSeparator, $forbidChar)) {
+            throw new Exception(get_class($this) . '::valSeparator 属性不能是' . implode(',', $forbidChar));
+        }
+        
         $this->parseArgs();
     }
     
